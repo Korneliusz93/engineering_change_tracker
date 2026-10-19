@@ -3,6 +3,7 @@ import json
 import pathlib
 import logging
 import re
+import typing
 
 def read_csv_data(path):
     with open(path, 'r') as f:
@@ -21,9 +22,9 @@ class work_request:
         self.contact = contact
         self.log = ""
 
-    def validate_id(self, id_list) -> bool:
+    def validate_id(self, id_list: set) -> bool:
         if not self.id:
-            self.log += "Id is empty\n"
+            self.log += "Empty Id; "
             return False
         if self.id in id_list:
             self.log += f"{self.id} Id is already taken; "
@@ -37,9 +38,6 @@ class work_request:
         return True
 
     def validate_priority(self) -> bool:
-        if not self.priority:
-            self.log += "Empty priority; "
-            return False
         if self.priority not in ["high", "medium", "low"]:
             self.log += f"Invalid priority: {self.priority}; "
             return False
@@ -54,7 +52,14 @@ class work_request:
     def validate_contact(self) -> bool:
         if re.match(r"[^@]+@[^@]+\.[^@]+", self.contact):
             return True
+        self.log += f"Invalid contact: {self.contact}; "
         return False
+
+    def validate_description(self) -> bool:
+        if self.description is None:
+            self.log += "Empty description; "
+            return False
+        return True
 
     def __str__(self):
         if self.log:
@@ -86,30 +91,35 @@ class run_report:
                     self.log += f"{req.contact}\n"
                 else:
                     self.log += f"{req}\n"
-
     def __str__(self):
         return self.log
 
 def create_work_request(id, title, description, priority, status, contact):
+    #Check for type validation non csv data
+    if [x for x in [id, title, description, priority, status, contact] if not isinstance(x, str)]:
+        raise TypeError("Invalid data type provided")
     return work_request(id, title, description, priority, status, contact)
 
-def validate_work_request(work_request: work_request, work_reqs_ids) -> bool:
+def validate_work_request(work_req: work_request, work_reqs_ids) -> bool:
     try:
-        if not work_request:
+        if not work_request or not isinstance(work_req, work_request):
             return False
-        is_id_valid = work_request.validate_id(work_reqs_ids)
-        is_prio_valid = work_request.validate_priority()
-        is_title_valid = work_request.validate_title()
-        is_status_valid = work_request.validate_status()
-        is_contact_valid = work_request.validate_contact()
-        if is_id_valid and is_prio_valid and is_title_valid and is_status_valid and is_contact_valid:
+        if not isinstance(work_reqs_ids, set):
+            return False
+        is_id_valid = work_req.validate_id(work_reqs_ids)
+        is_prio_valid = work_req.validate_priority()
+        is_title_valid = work_req.validate_title()
+        is_status_valid = work_req.validate_status()
+        is_contact_valid = work_req.validate_contact()
+        is_description_valid = work_req.validate_description()
+        if is_id_valid and is_prio_valid and is_title_valid and is_status_valid and is_contact_valid and is_description_valid:
             return True
         else:
             return False
-    #TODO: write more exceptions
     except AttributeError:
-        work_request.log += "Invalid attribute"
-        return False
+        raise AttributeError("Invalid data provided")
+    except TypeError:
+        raise TypeError("Invalid data type provided")
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -120,15 +130,21 @@ if __name__ == '__main__':
     valid_wk_rqs_ids = set()
     invalid_wk_rqs = []
     for index, row in enumerate(parsec_csv):
-        if len(row) != 6:
-            invalid_wk_rqs.append(f"Invalid record at line {index}: {row}. Request could not be created.")
-            continue
-        work_req = create_work_request(row[0], row[1], row[2], row[3], row[4], row[5])
-        if validate_work_request(work_req, valid_wk_rqs_ids):
-            valid_wk_rqs.append(work_req)
-            valid_wk_rqs_ids.add(work_req.id)
-        else:
-            invalid_wk_rqs.append(work_req)
+        try:
+            if len(row) != 6:
+                invalid_wk_rqs.append(f"Invalid record at line {index}: {row}. Request could not be created.")
+                continue
+            work_req = create_work_request(row[0], row[1], row[2], row[3], row[4], row[5])
+            if validate_work_request(work_req, valid_wk_rqs_ids):
+                valid_wk_rqs.append(work_req)
+                valid_wk_rqs_ids.add(work_req.id)
+            else:
+                invalid_wk_rqs.append(work_req)
+        except TypeError:
+            invalid_wk_rqs.append(f"Invalid data type provided {index}: {row}. Request could not be created.")
+        except AttributeError:
+            invalid_wk_rqs.append(f"Invalid data provided {index}: {row}. Request could not be created.")
+
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.report_log()
     print(operation_report)
