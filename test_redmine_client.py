@@ -80,7 +80,7 @@ def test_create_issue():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine)
 
-    issue = rc.create_issue('Update power supply module','Replace component with revised version','High', "new", test_project)
+    issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", test_project)
     assert isinstance(issue, dict)
 
     assert issue is not None
@@ -89,5 +89,4 @@ def test_priorities():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine)
     priorities = rc.redmine.enumeration.filter(resource='issue_priorities')
-    for priority in priorities:
-        print(priority.id, priority.name)
+    assert isinstance(priorities, list)

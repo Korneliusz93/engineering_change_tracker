@@ -6,21 +6,21 @@ import re
 import typing
 from redminelib import Redmine
 from redmine_client import redmine_client
-
+import time
 from dotenv import load_dotenv
 load_dotenv()
 import requests
 import os
+import sys
 
 api_key = os.getenv("REDMINE_API_KEY")
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 def read_csv_data(path):
     with open(path, 'r') as f:
         reader = csv.reader(f,delimiter=';')
         return list(reader)
-
-logger = logging.getLogger(__name__)
 
 class work_request:
     def __init__(self, id, title, description, priority, status, contact):
@@ -96,6 +96,7 @@ class run_report:
         if self.invalid_reqs:
             self.log += f"{len(self.invalid_reqs)} Invalid Requests:\n"
             for req in self.invalid_reqs:
+                self.log += f"[{time.ctime()}]"
                 if isinstance(req, work_request):
                     self.log += f"{req.id}: {req.title}; "
                     self.log += f"{req.description}; "
@@ -107,6 +108,11 @@ class run_report:
                     self.log += f"{req}\n"
     def __str__(self):
         return self.log
+
+    def save_log(self):
+        with open("run_report.log", "a") as f:
+            f.write(str(self))
+            f.write("===============\n")
 
 def create_work_request(id, title, description, priority, status, contact):
     #Check for type validation non csv data
@@ -138,11 +144,15 @@ def validate_work_request(work_req: work_request, work_reqs_ids) -> bool:
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     #init the variables
+    if len(sys.argv) != 2:
+        raise TypeError("Invalid number of arguments provided")
     logging.basicConfig(filename='eng_change_tracker.log', level=logging.INFO)
-    path = "/Users/admin/PycharmProjects/    engineering_change_tracker/sample_data/sample_data1.csv"
+    path = sys.argv[1]
     redmine = Redmine("http://localhost:3000/", key=api_key)
+    rc = redmine_client(redmine)
     parsec_csv = read_csv_data(path)
     #temp variables
+    test_project = 'test-redmine-connection'
     valid_wk_rqs = []
     valid_wk_rqs_ids = set()
     invalid_wk_rqs = []
@@ -165,8 +175,13 @@ if __name__ == '__main__':
     #output log from read
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.report_log()
-    print(operation_report)
+    operation_report.save_log()
+    #save valid requests to Redmine
+    #TODO: log Redmine API export
+    for work_req in valid_wk_rqs:
+        work_req_fields = work_req.__dict__
+        rc.create_issue(work_req_fields["title"],work_req_fields["description"],work_req_fields["priority"],
+                        work_req_fields["status"],test_project)
 
-    #
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
