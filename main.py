@@ -4,6 +4,16 @@ import pathlib
 import logging
 import re
 import typing
+from redminelib import Redmine
+from redmine_client import redmine_client
+
+from dotenv import load_dotenv
+load_dotenv()
+import requests
+import os
+
+api_key = os.getenv("REDMINE_API_KEY")
+load_dotenv()
 
 def read_csv_data(path):
     with open(path, 'r') as f:
@@ -38,7 +48,7 @@ class work_request:
         return True
 
     def validate_priority(self) -> bool:
-        if self.priority not in ["high", "medium", "low"]:
+        if self.priority not in ["High", "Medium", "Low"]:
             self.log += f"Invalid priority: {self.priority}; "
             return False
         return True
@@ -46,6 +56,9 @@ class work_request:
     def validate_status(self) -> bool:
         if not self.status:
             self.log += "Empty status; "
+            return False
+        if self.status not in ["open", "closed", "new"]:
+            self.log += f"Invalid priority: {self.priority}; "
             return False
         return True
 
@@ -89,6 +102,7 @@ class run_report:
                     self.log += f"{req.priority}; "
                     self.log += f"{req.status}; "
                     self.log += f"{req.contact}\n"
+                    self.log += f"{req.log}\n"
                 else:
                     self.log += f"{req}\n"
     def __str__(self):
@@ -123,12 +137,16 @@ def validate_work_request(work_req: work_request, work_reqs_ids) -> bool:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    #init the variables
     logging.basicConfig(filename='eng_change_tracker.log', level=logging.INFO)
     path = "/Users/admin/PycharmProjects/    engineering_change_tracker/sample_data/sample_data1.csv"
+    redmine = Redmine("http://localhost:3000/", key=api_key)
     parsec_csv = read_csv_data(path)
+    #temp variables
     valid_wk_rqs = []
     valid_wk_rqs_ids = set()
     invalid_wk_rqs = []
+    #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
         try:
             if len(row) != 6:
@@ -144,9 +162,11 @@ if __name__ == '__main__':
             invalid_wk_rqs.append(f"Invalid data type provided {index}: {row}. Request could not be created.")
         except AttributeError:
             invalid_wk_rqs.append(f"Invalid data provided {index}: {row}. Request could not be created.")
-
+    #output log from read
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.report_log()
     print(operation_report)
+
+    #
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
