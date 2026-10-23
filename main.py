@@ -1,15 +1,10 @@
 import csv
-import json
-import pathlib
 import logging
 import re
-import typing
 from redminelib import Redmine
 from redmine_client import redmine_client
-import time
 from dotenv import load_dotenv
 load_dotenv()
-import requests
 import os
 import sys
 
@@ -126,8 +121,6 @@ if __name__ == '__main__':
                 invalid_wk_rqs.append(work_req)
         except TypeError:
             invalid_wk_rqs.append(f"Invalid data type provided {index}: {row}. Request could not be created.")
-        except AttributeError:
-            invalid_wk_rqs.append(f"Invalid data provided {index}: {row}. Request could not be created.")
     #output log from read
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.report_log()
