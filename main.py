@@ -77,12 +77,9 @@ class run_report:
 
         return "\n".join(lines) + "\n"
 
-    def __str__(self):
-        return self.log
-
     def save_log(self):
         with open("run_report.log", "a") as f:
-            f.write(str(self))
+            f.write(self.report_log())
             f.write("===============\n")
 
 def create_work_request(id, title, description, priority, status, contact):
