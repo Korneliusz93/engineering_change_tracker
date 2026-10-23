@@ -43,7 +43,7 @@ class work_request:
         if not self.status:
             self.log += "Empty status; "
         if self.status not in ["open", "closed", "new"]:
-            self.log += f"Invalid status: {self.priority}; "
+            self.log += f"Invalid status: {self.status}; "
         if not re.match(r"[^@]+@[^@]+\.[^@]+", self.contact):
             self.log += f"Invalid contact: {self.contact}; "
         if self.description is None:
@@ -120,7 +120,6 @@ if __name__ == '__main__':
             invalid_wk_rqs.append(f"Invalid data type provided {index}: {row}. Request could not be created.")
     #output log from read
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
-    operation_report.report_log()
     operation_report.save_log()
     #save valid requests to Redmine
     #TODO: log Redmine API export
