@@ -48,7 +48,7 @@ class work_request:
         if not self.status:
             self.log += "Empty status; "
         if self.status not in ["open", "closed", "new"]:
-            self.log += f"Invalid priority: {self.priority}; "
+            self.log += f"Invalid status: {self.priority}; "
         if not re.match(r"[^@]+@[^@]+\.[^@]+", self.contact):
             self.log += f"Invalid contact: {self.contact}; "
         if self.description is None:
@@ -59,7 +59,7 @@ class work_request:
 
     def __str__(self):
         if self.log:
-            return f"Request could not be created. RESON: {self.log}"
+            return f"Request could not be created. REASON: {self.log}"
         return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.contact}"
 
 class run_report:
@@ -100,7 +100,7 @@ def create_work_request(id, title, description, priority, status, contact):
 if __name__ == '__main__':
     #init the variables
     if len(sys.argv) != 3:
-        raise TypeError("Invalid number of arguments provided")
+        sys.exit("Invalid number of arguments")
     path = sys.argv[1]
     project = sys.argv[2]
     parsec_csv = read_csv_data(path)
