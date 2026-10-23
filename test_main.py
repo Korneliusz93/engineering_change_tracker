@@ -1,7 +1,7 @@
 from operator import contains
 
 import pytest
-from main import work_request, validate_work_request, run_report, create_work_request
+from main import work_request, run_report, create_work_request
 
 
 def test_validate_same_id():
