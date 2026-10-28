@@ -2,6 +2,7 @@ import csv
 import logging
 import re
 from redminelib import Redmine
+from redminelib.exceptions import BaseRedmineError
 from redmine_client import redmine_client
 from dotenv import load_dotenv
 load_dotenv()
@@ -9,17 +10,36 @@ import os
 import sys
 
 def create_redmine_client():
-    api_key = os.getenv("REDMINE_API_KEY")
-    redmine = Redmine("http://localhost:3000/", key=api_key)
-    return redmine_client(redmine)
+    try:
+        api_key = os.getenv("REDMINE_API_KEY")
+        if not api_key:
+            raise ValueError("REDMINE_API_KEY is not configured")
+        redmine = Redmine("http://localhost:3000/", key=api_key)
+        return redmine_client(redmine)
+    except BaseRedmineError as e:
+        raise e
+    except ValueError as e:
+        raise e
 
 def configure_logging():
     logging.basicConfig(filename='eng_change_tracker.log', level=logging.INFO)
     return logging.getLogger(__name__)
 
 def read_csv_data(path: str) -> list[list[str]]:
-    with open(path, "r", encoding="utf-8", newline="") as file:
-        return list(csv.reader(file, delimiter=";"))
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as file:
+            parsed_csv =  list(csv.reader(file, delimiter=";"))
+            if not parsed_csv:
+                raise ValueError(f"Invalid csv file {path}")
+            header = parsed_csv[0]
+            print(header)
+            if  len(header) != 6 or "id" not in header[0] or header[1] != "title" or header[2] != "description" or header[3] != "priority" or header[4] != "status" or header[5] != "contact":
+                raise ValueError(f"Invalid csv file {path}")
+            return parsed_csv
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found {path}")
+    except UnicodeDecodeError:
+        raise UnicodeDecodeError(f"File not found {path}")
 
 class work_request:
     def __init__(self, id, title, description, priority, status, contact):
@@ -93,12 +113,15 @@ if __name__ == '__main__':
     #init the variables
     if len(sys.argv) != 3:
         sys.exit("Invalid number of arguments")
+    logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
-    parsec_csv = read_csv_data(path)
-
-    redmine_client = create_redmine_client()
-    logger = configure_logging()
+    try:
+        parsec_csv = read_csv_data(path)
+        redmine_client = create_redmine_client()
+    except Exception as e:
+        logging.error(e)
+        sys.exit(e)
     #temp variables
     valid_wk_rqs = []
     valid_wk_rqs_ids = set()
@@ -124,9 +147,7 @@ if __name__ == '__main__':
     #save valid requests to Redmine
     #TODO: log Redmine API export
     for work_req in valid_wk_rqs:
-        print(work_req.title)
-        redmine_client.create_issue(work_req.title, work_req.description, work_req.priority,
-                        work_req.status,project)
+        redmine_client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

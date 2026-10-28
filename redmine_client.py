@@ -1,3 +1,8 @@
+import logging
+
+from redminelib.exceptions import AuthError, BaseRedmineError
+
+
 class redmine_client:
     def __init__(self, redmine):
         self.redmine = redmine
@@ -40,11 +45,15 @@ class redmine_client:
 
     #TODO: integrate with current CSV implementation
     def create_issue(self, subject, description, priority, status, project_id):
-        issue = self.redmine.issue.create(
-            project_id=project_id,
-            subject=subject,
-            status=status,
-            description=description,
-            priority=priority
-        )
-        return issue
+        try:
+            issue = self.redmine.issue.create(
+                project_id=project_id,
+                subject=subject,
+                status=status,
+                description=description,
+                priority=priority
+            )
+            return issue
+        except AuthError as e:
+            logging.error(e)
+            raise AuthError()

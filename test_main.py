@@ -69,3 +69,4 @@ def test_save_log_writes_report_content(tmp_path, monkeypatch):
     content = (tmp_path / "run_report.log").read_text(encoding="utf-8")
     assert "Invalid Requests:" not in content
     assert "1 Valid Requests" in content
+    assert "Fix pump" in content
