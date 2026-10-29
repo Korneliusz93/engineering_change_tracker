@@ -102,13 +102,15 @@ class run_report:
             f.write(self.report_log())
             f.write("===============\n")
 
-def create_work_request(id, title, description, priority, status, contact):
+def create_work_request(row: list[str]):
     #Check for type validation non csv data
+    if len(row) != 6:
+        raise ValueError(f"Invalid record: {row}. Invalid number of arguments {len(row)}")
+    id, title, description, priority, status, contact = row
     if [x for x in [id, title, description, priority, status, contact] if not isinstance(x, str)]:
         raise TypeError("Invalid data type provided")
     return work_request(id, title, description, priority, status, contact)
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     #init the variables
     if len(sys.argv) != 3:
@@ -122,18 +124,14 @@ if __name__ == '__main__':
     except Exception as e:
         logging.error(e)
         sys.exit(e)
-    #temp variables
+    #Temp variables
     valid_wk_rqs = []
     valid_wk_rqs_ids = set()
     invalid_wk_rqs = []
     #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
         try:
-            if len(row) != 6:
-                invalid_wk_rqs.append(f"Invalid record at line {index}: {row}. Request could not be created.")
-                continue
-            work_req = create_work_request(row[0], row[1], row[2], row[3], row[4], row[5])
-            print(work_req)
+            work_req = create_work_request(row)
             if work_req.validate(valid_wk_rqs_ids):
                 valid_wk_rqs.append(work_req)
                 valid_wk_rqs_ids.add(work_req.id)
@@ -141,6 +139,8 @@ if __name__ == '__main__':
                 invalid_wk_rqs.append(work_req)
         except TypeError:
             invalid_wk_rqs.append(f"Invalid data type provided {index}: {row}. Request could not be created.")
+        except ValueError as e:
+            invalid_wk_rqs.append(e)
     #output log from read
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.save_log()
@@ -148,6 +148,3 @@ if __name__ == '__main__':
     #TODO: log Redmine API export
     for work_req in valid_wk_rqs:
         redmine_client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
-
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

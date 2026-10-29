@@ -53,11 +53,19 @@ def test_validate_description_none():
     wr = work_request('ER-123', 'valid', None, 'high', 'test status', 'contact@contact.com')
     is_valid = wr.validate( {'ER-423'})
     assert is_valid == False
+    assert "Empty description" in wr.log
 
-def test_create_work_request():
+def test_create_work_request_invalid_type():
     with pytest.raises(TypeError) as e:
-        create_work_request(None, 'valid', 'test description', 'high', 'test status', 'contact@contact.com')
+        row = [None, 'valid', 'test description', 'high', 'test status', 'contact@contact.com']
+        create_work_request(row)
     assert "Invalid data type provided" in str(e.value)
+
+def test_create_work_request_invalid_value():
+    with pytest.raises(ValueError) as e:
+        row = ['ER-1234', 'valid', 'test description', 'high', 'test status']
+        create_work_request(row)
+    assert "Invalid number of arguments" in str(e.value)
 
 def test_save_log_writes_report_content(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)

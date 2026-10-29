@@ -1,6 +1,6 @@
 import logging
 
-from redminelib.exceptions import AuthError, BaseRedmineError
+from redminelib.exceptions import AuthError, BaseRedmineError, ServerError, ResourceNotFoundError
 
 
 class redmine_client:
@@ -43,7 +43,6 @@ class redmine_client:
             memberships_list.append(membership.user)
         return memberships_list
 
-    #TODO: integrate with current CSV implementation
     def create_issue(self, subject, description, priority, status, project_id):
         try:
             issue = self.redmine.issue.create(
@@ -57,3 +56,9 @@ class redmine_client:
         except AuthError as e:
             logging.error(e)
             raise AuthError()
+        except ServerError as e:
+            logging.error(e)
+            raise ServerError()
+        except ResourceNotFoundError as e:
+            logging.error(e)
+            raise ResourceNotFoundError()
