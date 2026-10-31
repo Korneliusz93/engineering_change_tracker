@@ -2,7 +2,7 @@ import csv
 import logging
 import re
 from redminelib import Redmine
-from redminelib.exceptions import BaseRedmineError
+from redminelib.exceptions import BaseRedmineError, AuthError, ResourceNotFoundError, ServerError
 from redmine_client import redmine_client
 from dotenv import load_dotenv
 load_dotenv()
@@ -121,8 +121,8 @@ if __name__ == '__main__':
     try:
         parsec_csv = read_csv_data(path)
         redmine_client = create_redmine_client()
-    except Exception as e:
-        logging.error(e)
+    except (AuthError, ValueError) as e:
+        logger.exception("Couldn't connect to redmine")
         sys.exit(e)
     #Temp variables
     valid_wk_rqs = []
@@ -146,6 +146,8 @@ if __name__ == '__main__':
     operation_report = run_report(valid_wk_rqs, invalid_wk_rqs)
     operation_report.save_log()
     #save valid requests to Redmine
-    #TODO: log Redmine API export
     for work_req in valid_wk_rqs:
-        redmine_client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
+        try:
+            redmine_client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
+        except (ResourceNotFoundError, ServerError) as e:
+            logger.exception("Couldn't create issue")

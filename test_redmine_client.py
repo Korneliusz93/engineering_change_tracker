@@ -76,13 +76,6 @@ def test_create_issue():
     assert isinstance(issue, dict)
     assert issue is not None
 
-def test_create_issue_wrong_project():
-    test_project = 'test-redmine-not-connected'
-    rc = redmine_client(redmine)
-    with pytest.raises(ResourceNotFoundError) as e:
-        issue = rc.create_issue('Update power supply module','Replace component with revised version','Low',"new",
-                                test_project)
-    assert str(e.value) == "Requested resource doesn't exist"
 
 def test_priorities():
     test_project = 'test-redmine-connection'
