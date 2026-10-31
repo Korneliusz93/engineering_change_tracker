@@ -130,6 +130,7 @@ if __name__ == '__main__':
     invalid_wk_rqs = []
     #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
+        if index == 0: continue
         try:
             work_req = create_work_request(row)
             if work_req.validate(valid_wk_rqs_ids):
