@@ -123,7 +123,7 @@ if __name__ == '__main__':
         sys.exit(1)
     try:
         client = create_redmine_client(server)
-    except BaseRedmineError as e:
+    except (ValueError, BaseRedmineError) as e:
         logger.exception("Couldn't connect to redmine")
         sys.exit(1)
     #Temp variables
@@ -144,12 +144,16 @@ if __name__ == '__main__':
             invalid_work_request.append(ReportMsg(index, str(e)))
         except ValueError as e:
             invalid_work_request.append(ReportMsg(index, str(e)))
-    #output log from read
-    operation_report = RunReport(valid_work_requests, invalid_work_request)
-    operation_report.save_log()
+
     #save valid requests to Redmine
-    for work_req in valid_work_requests:
+    for work_request in valid_work_requests:
         try:
-            client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
+            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, project)
+        except AuthError as e:
+            logger.exception("Couldn't authenticate and create issue")
         except BaseRedmineError as e:
             logger.exception("Couldn't create issue.")
+
+    # output log from read
+    operation_report = RunReport(valid_work_requests, invalid_work_request)
+    operation_report.save_log()
