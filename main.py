@@ -9,37 +9,26 @@ load_dotenv()
 import os
 import sys
 
-def create_redmine_client():
-    try:
-        api_key = os.getenv("REDMINE_API_KEY")
-        if not api_key:
-            raise ValueError("REDMINE_API_KEY is not configured")
-        redmine = Redmine("http://localhost:3000/", key=api_key)
-        return redmine_client(redmine)
-    except BaseRedmineError as e:
-        raise e
-    except ValueError as e:
-        raise e
+def create_redmine_client(redmine_server: str):
+    api_key = os.getenv("REDMINE_API_KEY")
+    if not api_key:
+        raise ValueError("REDMINE_API_KEY is not configured")
+    redmine = Redmine(redmine_server, key=api_key)
+    return redmine_client(redmine)
 
 def configure_logging():
     logging.basicConfig(filename='eng_change_tracker.log', level=logging.INFO)
     return logging.getLogger(__name__)
 
 def read_csv_data(path: str) -> list[list[str]]:
-    try:
-        with open(path, "r", encoding="utf-8", newline="") as file:
-            parsed_csv =  list(csv.reader(file, delimiter=";"))
-            if not parsed_csv:
-                raise ValueError(f"Invalid csv file {path}")
-            header = parsed_csv[0]
-            print(header)
-            if  len(header) != 6 or "id" not in header[0] or header[1] != "title" or header[2] != "description" or header[3] != "priority" or header[4] != "status" or header[5] != "contact":
-                raise ValueError(f"Invalid csv file {path}")
-            return parsed_csv
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File not found {path}")
-    except UnicodeDecodeError:
-        raise UnicodeDecodeError(f"File not found {path}")
+    with open(path, "r", encoding="utf-8", newline="") as file:
+        parsed_csv =  list(csv.reader(file, delimiter=";"))
+        if not parsed_csv:
+            raise ValueError(f"Invalid csv file {path}")
+        header = parsed_csv[0]
+        if  len(header) != 6 or "id" not in header[0] or header[1] != "title" or header[2] != "description" or header[3] != "priority" or header[4] != "status" or header[5] != "contact":
+            raise ValueError(f"Invalid csv file {path}")
+        return parsed_csv
 
 class work_request:
     def __init__(self, id, title, description, priority, status, contact):
@@ -113,17 +102,26 @@ def create_work_request(row: list[str]):
 
 if __name__ == '__main__':
     #init the variables
-    if len(sys.argv) != 3:
+    #"http://localhost:3000/"
+    if len(sys.argv) != 4:
         sys.exit("Invalid number of arguments")
     logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
+    if sys.argv[3] == "-dr":
+        server= "http://localhost:3000/"
+    else:
+        server = sys.argv[3]
     try:
         parsec_csv = read_csv_data(path)
-        redmine_client = create_redmine_client()
-    except (AuthError, ValueError) as e:
+    except (FileNotFoundError, ValueError, OSError) as e:
+        logger.exception("Couldn't open csv file")
+        sys.exit(1)
+    try:
+        client = create_redmine_client(server)
+    except BaseRedmineError as e:
         logger.exception("Couldn't connect to redmine")
-        sys.exit(e)
+        sys.exit(1)
     #Temp variables
     valid_wk_rqs = []
     valid_wk_rqs_ids = set()
@@ -148,6 +146,6 @@ if __name__ == '__main__':
     #save valid requests to Redmine
     for work_req in valid_wk_rqs:
         try:
-            redmine_client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
-        except (ResourceNotFoundError, ServerError) as e:
+            client.create_issue(work_req.title, work_req.description, work_req.priority, work_req.status, project)
+        except BaseRedmineError as e:
             logger.exception("Couldn't create issue")

@@ -44,21 +44,10 @@ class redmine_client:
         return memberships_list
 
     def create_issue(self, subject, description, priority, status, project_id):
-        try:
-            issue = self.redmine.issue.create(
-                project_id=project_id,
-                subject=subject,
-                status=status,
-                description=description,
-                priority=priority
-            )
-            return issue
-        except AuthError as e:
-            logging.error(e)
-            raise AuthError()
-        except ServerError as e:
-            logging.error(e)
-            raise ServerError()
-        except ResourceNotFoundError as e:
-            logging.error(e)
-            raise ResourceNotFoundError()
+        return self.redmine.issue.create(
+            project_id=project_id,
+            subject=subject,
+            status=status,
+            description=description,
+            priority=priority
+        )
