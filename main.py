@@ -66,6 +66,11 @@ class WorkRequest:
             return f"{self.log}"
         return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.contact}"
 
+class ReportMsg():
+    def __init__(self, row, message):
+        self.row = row
+        self.message = message
+
 class RunReport:
     def __init__(self, valid_reqsuests: list[WorkRequest], invalid_requests: list[ReportMsg]):
         self.valid_reqsuests = valid_reqsuests
@@ -91,11 +96,6 @@ class RunReport:
             f.write(self.report_log())
             f.write("===============\n")
 
-class ReportMsg():
-    def __init__(self, row, message):
-        self.row = row
-        self.message = message
-
 def create_work_request(row: list[str]):
     #Check for type validation non csv data
     if len(row) != 6:
@@ -112,15 +112,18 @@ if __name__ == '__main__':
     logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
+
     if sys.argv[3] == "-dr":
         server= "http://localhost:3000/"
     else:
         server = sys.argv[3]
+
     try:
         parsec_csv = read_csv_data(path)
-    except (FileNotFoundError, ValueError, OSError) as e:
+    except (FileNotFoundError, ValueError, OSError, csv.Error) as e:
         logger.exception("Couldn't open csv file")
         sys.exit(1)
+
     try:
         client = create_redmine_client(server)
     except (ValueError, BaseRedmineError) as e:
@@ -144,16 +147,15 @@ if __name__ == '__main__':
             invalid_work_request.append(ReportMsg(index, str(e)))
         except ValueError as e:
             invalid_work_request.append(ReportMsg(index, str(e)))
-
     #save valid requests to Redmine
     for work_request in valid_work_requests:
         try:
             client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, project)
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
+            break
         except BaseRedmineError as e:
             logger.exception("Couldn't create issue.")
-
     # output log from read
     operation_report = RunReport(valid_work_requests, invalid_work_request)
     operation_report.save_log()
