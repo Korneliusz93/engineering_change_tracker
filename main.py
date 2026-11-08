@@ -53,7 +53,7 @@ class WorkRequest:
             self.log += "Empty status; "
         if self.status not in ["open", "closed", "new"]:
             self.log += f"Invalid status: {self.status}; "
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", self.contact):
+        if not re.match(r"(^(?!\.)[^@]+)(?<!\.)@([^@_]+)\.([^@\d]+?$)", self.contact) or re.match(r"(.*)[.]{2,}(.*)", self.contact):
             self.log += f"Invalid contact: {self.contact}; "
         if self.description is None:
             self.log += "Empty description; "

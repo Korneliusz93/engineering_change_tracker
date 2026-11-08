@@ -1,6 +1,7 @@
 import pytest
 from redminelib import Redmine
-from redminelib.exceptions import AuthError, ResourceNotFoundError
+from redminelib.resultsets import ResourceSet
+from redminelib.resources import Issue
 
 from redmine_client import redmine_client
 
@@ -73,12 +74,11 @@ def test_create_issue():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine)
     issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", test_project)
-    assert isinstance(issue, dict)
+    assert isinstance(issue, Issue)
     assert issue is not None
-
 
 def test_priorities():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine)
     priorities = rc.redmine.enumeration.filter(resource='issue_priorities')
-    assert isinstance(priorities, list)
+    assert isinstance(priorities, ResourceSet)
