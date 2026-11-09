@@ -32,7 +32,8 @@ def test_api_key_directly():
     assert response.status_code == 200
 
 def test_redmine_current_user():
-    rc = redmine_client(redmine)
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
     engine = rc.redmine.engine
     print("Configured API key:", bool(engine.requests['headers'].get('X-Redmine-API-Key')))
     print("Configured key length:", len(engine.requests['headers'].get('X-Redmine-API-Key', '')))
@@ -40,45 +41,62 @@ def test_redmine_current_user():
     print("Authenticated user:", user.login)
 
 def test_get_projects():
-    rc = redmine_client(redmine)
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
     projects = rc.get_projects()
     assert isinstance(projects, list)
+    assert len(projects) > 0
 
 #TEST Project
 #test-redmine-connection
 def test_get_issues():
     test_project = 'test-redmine-connection'
-    rc = redmine_client(redmine)
-    issues = rc.get_issues(test_project)
+    rc = redmine_client(redmine,test_project)
+    issues = rc.get_issues()
     assert isinstance(issues, list)
+    assert len(issues) > 0
 
 def test_get_issue():
     id = 1
-    rc = redmine_client(redmine)
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
     issue = rc.get_issue(id)
     print(issue)
+    assert issue is not None
     assert isinstance(issue, dict)
 
 def test_get_roles():
-    rc = redmine_client(redmine)
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
     roles = rc.get_roles()
     assert isinstance(roles, list)
+    assert len(roles) > 0
 
 def test_get_memberships():
     test_project = 'test-redmine-connection'
-    rc = redmine_client(redmine)
-    memberships = rc.get_memberships(test_project)
+    rc = redmine_client(redmine, test_project)
+    memberships = rc.get_memberships()
     assert isinstance(memberships, list)
 
 def test_create_issue():
     test_project = 'test-redmine-connection'
-    rc = redmine_client(redmine)
-    issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", test_project)
+    rc = redmine_client(redmine, test_project)
+    issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", "a@b.com")
     assert isinstance(issue, Issue)
     assert issue is not None
 
 def test_priorities():
     test_project = 'test-redmine-connection'
-    rc = redmine_client(redmine)
+    rc = redmine_client(redmine, test_project)
     priorities = rc.redmine.enumeration.filter(resource='issue_priorities')
+    assert priorities is not None
     assert isinstance(priorities, ResourceSet)
+    assert len(priorities) > 0
+
+def test_custom_fields():
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
+    custom_fields = rc.get_custom_fields()
+    assert isinstance(custom_fields, list)
+    assert custom_fields is not None
+    assert len(custom_fields) > 0

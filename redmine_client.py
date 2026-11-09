@@ -4,9 +4,9 @@ from redminelib.exceptions import AuthError, BaseRedmineError, ServerError, Reso
 
 
 class redmine_client:
-    def __init__(self, redmine):
+    def __init__(self, redmine, project_id):
         self.redmine = redmine
-        self.project_id = ""
+        self.project_id = project_id
         self.project_name = ""
 
     def get_projects(self):
@@ -16,8 +16,8 @@ class redmine_client:
             project_list.append((project.name, project.identifier))
         return project_list
 
-    def get_issues(self, project_id):
-        issues = self.redmine.issue.filter(project_id=project_id)
+    def get_issues(self):
+        issues = self.redmine.issue.filter(project_id=self.project_id)
         issue_list = []
         for issue in issues:
             issue_list.append((issue.id, issue.subject))
@@ -34,20 +34,33 @@ class redmine_client:
             role_list.append((role.id, role.name))
         return role_list
 
-    def get_memberships(self, project_id):
+    def get_memberships(self):
         memberships_list = []
         memberships = self.redmine.project_membership.filter(
-            project_id=project_id
+            project_id= self.project_id
         )
         for membership in memberships:
             memberships_list.append(membership.user)
         return memberships_list
 
-    def create_issue(self, subject, description, priority, status, project_id):
+    def get_custom_fields(self):
+        custom_fields = self.redmine.custom_field.all()#.filter(project_id=self.project_id)
+        custom_list = []
+        for custom_field in custom_fields:
+            custom_list.append((custom_field.id, custom_field.name))
+        print(custom_list)
+        return custom_list
+
+    def create_issue(self, subject, description, priority, status, contact):
         return self.redmine.issue.create(
-            project_id=project_id,
+            project_id= self.project_id,
             subject=subject,
             status=status,
             description=description,
-            priority=priority
+            priority=priority,
+            #TODO: move custom field ID to configuration
+            custom_fields=[
+                {"id": 2, "value": contact},
+            ],
+
         )

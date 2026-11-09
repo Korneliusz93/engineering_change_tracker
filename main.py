@@ -9,12 +9,14 @@ load_dotenv()
 import os
 import sys
 
-def create_redmine_client(redmine_server: str):
+def create_redmine_client(redmine_server: str, project_id: str):
     api_key = os.getenv("REDMINE_API_KEY")
     if not api_key:
         raise ValueError("REDMINE_API_KEY is not configured")
+    if not redmine_server.strip() or not project_id.strip():
+        raise ValueError("Redmine server and project ID are required")
     redmine = Redmine(redmine_server, key=api_key)
-    return redmine_client(redmine)
+    return redmine_client(redmine, project_id)
 
 def configure_logging():
     logging.basicConfig(filename='eng_change_tracker.log', level=logging.INFO)
@@ -125,7 +127,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     try:
-        client = create_redmine_client(server)
+        client = create_redmine_client(server, project)
     except (ValueError, BaseRedmineError) as e:
         logger.exception("Couldn't connect to redmine")
         sys.exit(1)
@@ -150,7 +152,7 @@ if __name__ == '__main__':
     #save valid requests to Redmine
     for work_request in valid_work_requests:
         try:
-            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, project)
+            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status)
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
             break
