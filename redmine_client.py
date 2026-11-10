@@ -1,13 +1,12 @@
 import logging
 
 from redminelib.exceptions import AuthError, BaseRedmineError, ServerError, ResourceNotFoundError
-
+from typing import List
 
 class redmine_client:
     def __init__(self, redmine, project_id):
         self.redmine = redmine
         self.project_id = project_id
-        self.project_name = ""
 
     def get_projects(self):
         projects = self.redmine.project.all()
@@ -51,16 +50,21 @@ class redmine_client:
         print(custom_list)
         return custom_list
 
-    def create_issue(self, subject, description, priority, status, contact):
-        return self.redmine.issue.create(
-            project_id= self.project_id,
-            subject=subject,
-            status=status,
-            description=description,
-            priority=priority,
-            #TODO: move custom field ID to configuration
-            custom_fields=[
-                {"id": 2, "value": contact},
-            ],
-
-        )
+    def create_issue(self, subject, description, priority, status, custom_fields):
+        if custom_fields:
+            return self.redmine.issue.create(
+                project_id= self.project_id,
+                subject=subject,
+                status=status,
+                description=description,
+                priority=priority,
+                custom_fields=custom_fields
+            )
+        else:
+            return self.redmine.issue.create(
+                project_id=self.project_id,
+                subject=subject,
+                status=status,
+                description=description,
+                priority=priority,
+            )

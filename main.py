@@ -1,6 +1,7 @@
 import csv
 import logging
 import re
+from dataclasses import dataclass
 from redminelib import Redmine
 from redminelib.exceptions import BaseRedmineError, AuthError, ResourceNotFoundError, ServerError
 from redmine_client import redmine_client
@@ -8,6 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import sys
+
+
+@dataclass
+class CustomField:
+    id: int
+    value: str
 
 def create_redmine_client(redmine_server: str, project_id: str):
     api_key = os.getenv("REDMINE_API_KEY")
@@ -33,16 +40,18 @@ def read_csv_data(path: str) -> list[list[str]]:
         return parsed_csv
 
 class WorkRequest:
-    def __init__(self, id, title, description, priority, status, contact):
+    def __init__(self, id, title, description, priority, status, contact: CustomField):
         self.id = id
         self.title = title
         self.description = description
         self.priority = priority
         self.status = status
-        self.contact = contact
         self.log = ""
+        #CONFIGURATION: All fields below should be considered Custom
+        self.custom_fields = {"contact": contact}
 
     def validate(self, id_list: set[str]) -> bool:
+        contact = self.custom_fields["contact"].value
         if not self.id:
             self.log += "Empty Id; "
         if self.id in id_list:
@@ -55,8 +64,8 @@ class WorkRequest:
             self.log += "Empty status; "
         if self.status not in ["open", "closed", "new"]:
             self.log += f"Invalid status: {self.status}; "
-        if not re.match(r"(^(?!\.)[^@]+)(?<!\.)@([^@_]+)\.([^@\d]+?$)", self.contact) or re.match(r"(.*)[.]{2,}(.*)", self.contact):
-            self.log += f"Invalid contact: {self.contact}; "
+        if not re.match(r"(^(?!\.)[^@]+)(?<!\.)@([^@_]+)\.([^@\d]+?$)", contact) or re.match(r"(.*)[.]{2,}(.*)", contact):
+            self.log += f"Invalid contact: {contact}; "
         if self.description is None:
             self.log += "Empty description; "
         if self.log:
@@ -66,7 +75,7 @@ class WorkRequest:
     def __str__(self):
         if self.log:
             return f"{self.log}"
-        return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.contact}"
+        return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.custom_fields["contact"].value}"
 
 class ReportMsg():
     def __init__(self, row, message):
@@ -84,7 +93,7 @@ class RunReport:
         for request in self.valid_reqsuests:
             lines.append(
                 f"{request.id}: {request.title}; {request.description}; "
-                f"{request.priority}; {request.status}; {request.contact}"
+                f"{request.priority}; {request.status}; {request.custom_fields["contact"].value}"
             )
         if self.invalid_requests:
             lines.append(f"{len(self.invalid_requests)} Invalid Requests:")
@@ -102,8 +111,10 @@ def create_work_request(row: list[str]):
     #Check for type validation non csv data
     if len(row) != 6:
         raise ValueError(f"Invalid number of arguments {len(row)}")
-    id, title, description, priority, status, contact = row
-    if [x for x in [id, title, description, priority, status, contact] if not isinstance(x, str)]:
+    #CONFIGURATION: Add all necessary Custom fields declarations and fill the value
+    contact = CustomField(2,"")
+    id, title, description, priority, status, contact.value = row
+    if [x for x in [id, title, description, priority, status, contact.value] if not isinstance(x, str)]:
         raise TypeError("Invalid data type provided")
     return WorkRequest(id, title, description, priority, status, contact)
 
@@ -152,7 +163,11 @@ if __name__ == '__main__':
     #save valid requests to Redmine
     for work_request in valid_work_requests:
         try:
-            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status)
+            custom_fields = [
+                {"id": field.id, "value": field.value}
+                for field in work_request.custom_fields.values()
+            ]
+            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
             break

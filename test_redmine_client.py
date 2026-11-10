@@ -2,7 +2,7 @@ import pytest
 from redminelib import Redmine
 from redminelib.resultsets import ResourceSet
 from redminelib.resources import Issue
-
+from main import CustomField
 from redmine_client import redmine_client
 
 from dotenv import load_dotenv
@@ -78,13 +78,6 @@ def test_get_memberships():
     memberships = rc.get_memberships()
     assert isinstance(memberships, list)
 
-def test_create_issue():
-    test_project = 'test-redmine-connection'
-    rc = redmine_client(redmine, test_project)
-    issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", "a@b.com")
-    assert isinstance(issue, Issue)
-    assert issue is not None
-
 def test_priorities():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine, test_project)
@@ -100,3 +93,10 @@ def test_custom_fields():
     assert isinstance(custom_fields, list)
     assert custom_fields is not None
     assert len(custom_fields) > 0
+
+def test_create_issue():
+    test_project = 'test-redmine-connection'
+    rc = redmine_client(redmine, test_project)
+    issue = rc.create_issue('Update power supply module','Replace component with revised version','Low', "new", [{"id":2,"value":"a@b.pl"}])
+    assert isinstance(issue, Issue)
+    assert issue is not None
