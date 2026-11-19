@@ -136,8 +136,11 @@ The example records are illustrative and do not represent real contacts.
 Run the application from the command line and provide the path to the input CSV file:
 
 ```bash
-python main.py sample_data/sample_data1.csv
+python main.py sample_data/sample_data1.csv <server> <tracker> <dry-run flag>
 ```
+
+giving --local in server uses localhost on port 3000
+dry-run flag is optional and instead of writing to server is giving the report output.
 
 Replace `main.py` with the actual application entry-point filename if necessary.
 
