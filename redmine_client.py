@@ -19,7 +19,7 @@ class redmine_client:
         issues = self.redmine.issue.filter(project_id=self.project_id)
         issue_list = []
         for issue in issues:
-            issue_list.append((issue.id, issue.subject))
+            issue_list.append(issue)
         return issue_list
 
     def get_issue(self, issue_id):

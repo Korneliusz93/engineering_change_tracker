@@ -186,8 +186,20 @@ if __name__ == '__main__':
             invalid_work_request.append(ReportMsg(index, str(e)))
         except ValueError as e:
             invalid_work_request.append(ReportMsg(index, str(e)))
+    #Check against existing issues redmine DB if id exists
+    existing_issues = client.get_issues()
+    custom_ids = {
+        str(field["value"])
+        for issue in existing_issues
+        for field in issue.custom_fields
+        if field["id"] == 3 and field["value"] is not None
+    }
     #save valid requests to Redmine
     for work_request in valid_work_requests:
+        custom_id = work_request.custom_fields["custom_id"].value
+        if custom_id in custom_ids:
+            logger.error(f"Work request with custom_id {custom_id} already exists")
+            continue
         try:
             custom_fields = [
                 {"id": field.id, "value": field.value}

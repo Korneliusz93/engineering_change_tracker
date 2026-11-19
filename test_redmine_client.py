@@ -60,6 +60,7 @@ def test_get_issues():
     issues = rc.get_issues()
     assert isinstance(issues, list)
     assert len(issues) > 0
+    assert isinstance(issues[0], Issue)
 
 
 def test_get_issue():
