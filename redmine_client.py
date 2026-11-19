@@ -50,6 +50,13 @@ class redmine_client:
         print(custom_list)
         return custom_list
 
+    def get_trackers(self):
+        trackers = self.redmine.tracker.all()
+        tracker_list = []
+        for tracker in trackers:
+            tracker_list.append((tracker.id, tracker.name))
+        return tracker_list
+
     def create_issue(self, subject, description, priority, status, custom_fields):
         if custom_fields:
             return self.redmine.issue.create(
