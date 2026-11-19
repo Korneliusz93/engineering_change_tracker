@@ -45,21 +45,24 @@ class Tracker:
 
 class WorkRequest:
     def __init__(self, id, title, description, priority, status, contact: CustomField):
-        self.id = id
         self.title = title
         self.description = description
         self.priority = priority
         self.status = status
         self.log = ""
         #CONFIGURATION: All fields below should be considered Custom
-        self.custom_fields = {"contact": contact}
+        self.custom_fields = {
+            "contact": contact,
+            "custom_id": id
+        }
 
     def validate(self, id_list: set[str]) -> bool:
         contact = self.custom_fields["contact"].value
-        if not self.id:
+        checked_id = self.custom_fields["custom_id"].value
+        if not checked_id:
             self.log += "Empty Id; "
-        if self.id in id_list:
-            self.log += f"{self.id} Id is already taken; "
+        if checked_id in id_list:
+            self.log += f"{checked_id} Id is already taken; "
         if not self.title:
             self.log += "Empty title; "
         if self.priority not in ["High", "Medium", "Low"]:
@@ -77,9 +80,11 @@ class WorkRequest:
         return True
 
     def __str__(self):
+        custom_field_id = self.custom_fields["custom_id"].value
+        contact = self.custom_fields["contact"].value
         if self.log:
             return f"{self.log}"
-        return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.custom_fields["contact"].value}"
+        return f"{custom_field_id} {self.title} {self.description} {self.priority} {self.status} {contact}"
 
 class ReportMsg():
     def __init__(self, row, message):
@@ -95,9 +100,11 @@ class RunReport:
     def report_log(self) -> str:
         lines = [f"{len(self.valid_reqsuests)} Valid Requests:"]
         for request in self.valid_reqsuests:
+            custom_field_id = request.custom_fields["custom_id"].value
+            contact = request.custom_fields["contact"].value
             lines.append(
-                f"{request.id}: {request.title}; {request.description}; "
-                f"{request.priority}; {request.status}; {request.custom_fields["contact"].value}"
+                f"{custom_field_id}: {request.title}; {request.description}; "
+                f"{request.priority}; {request.status}; {contact}"
             )
         if self.invalid_requests:
             lines.append(f"{len(self.invalid_requests)} Invalid Requests:")
@@ -117,10 +124,11 @@ def create_work_request(row: list[str]):
         raise ValueError(f"Invalid number of arguments {len(row)}")
     #CONFIGURATION: Add all necessary Custom fields declarations and fill the value
     contact = CustomField(2,"")
-    id, title, description, priority, status, contact.value = row
-    if [x for x in [id, title, description, priority, status, contact.value] if not isinstance(x, str)]:
+    custom_id = CustomField(3, "")
+    custom_id.value , title, description, priority, status, contact.value = row
+    if [x for x in [custom_id.value, title, description, priority, status, contact.value] if not isinstance(x, str)]:
         raise TypeError("Invalid data type provided")
-    return WorkRequest(id, title, description, priority, status, contact)
+    return WorkRequest(custom_id, title, description, priority, status, contact)
 
 if __name__ == '__main__':
     #init the variables
@@ -169,8 +177,9 @@ if __name__ == '__main__':
         try:
             work_request = create_work_request(row)
             if work_request.validate(valid_work_request_ids):
+                custom_id = work_request.custom_fields["custom_id"].value
                 valid_work_requests.append(work_request)
-                valid_work_request_ids.add(work_request.id)
+                valid_work_request_ids.add(custom_id)
             else:
                 invalid_work_request.append(ReportMsg(index, str(work_request)))
         except TypeError as e:

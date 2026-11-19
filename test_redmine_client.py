@@ -100,6 +100,7 @@ def test_custom_fields():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine, test_project)
     custom_fields = rc.get_custom_fields()
+    print(custom_fields)
     assert isinstance(custom_fields, list)
     assert custom_fields is not None
     assert len(custom_fields) > 0
