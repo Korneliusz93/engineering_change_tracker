@@ -82,6 +82,9 @@ Configure an appropriate issue type, such as `Feature`, according to your Redmin
 
 **Note:** Priority names, status values, and issue types must match the configuration and identifiers expected by the application and the Redmine API.
 
+The application supports Redmine custom fields. Before importing data, configure the required fields in Redmine’s administration interface. The fields used by the application are currently defined in code and can be extended there.
+Because custom field id is currently hardcoded: Custom field IDs must match those in your Redmine instance.
+
 ### 2. Configure environment variables
 
 Create a `.env` file in the project root:
