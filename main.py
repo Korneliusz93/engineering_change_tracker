@@ -95,6 +95,7 @@ class RunReport:
     def __init__(self, valid_reqsuests: list[WorkRequest], invalid_requests: list[ReportMsg]):
         self.valid_reqsuests = valid_reqsuests
         self.invalid_requests = invalid_requests
+        self.dry_run = []
         self.log = ""
 
     def report_log(self) -> str:
@@ -113,10 +114,18 @@ class RunReport:
 
         return "\n".join(lines) + "\n"
 
+    def dry_run_report(self):
+        if self.dry_run:
+            with open("run_report.log", "a") as f:
+                f.write("\n".join(self.dry_run))
+                f.write("\n===============\n")
+
     def save_log(self):
         with open("run_report.log", "a") as f:
             f.write(self.report_log())
             f.write("===============\n")
+        if self.dry_run:
+            self.dry_run_report()
 
 def create_work_request(row: list[str]):
     #Check for type validation non csv data
@@ -222,5 +231,5 @@ if __name__ == '__main__':
     # output log from read
     operation_report = RunReport(valid_work_requests, invalid_work_request)
     if dry_run_logs:
-        operation_report.log += "\n".join(dry_run_logs)
+        operation_report.dry_run = dry_run_logs
     operation_report.save_log()
