@@ -38,6 +38,10 @@ def read_csv_data(path: str) -> list[list[str]]:
         if  len(header) != 6 or "id" not in header[0] or header[1] != "title" or header[2] != "description" or header[3] != "priority" or header[4] != "status" or header[5] != "contact":
             raise ValueError(f"Invalid csv file {path}")
         return parsed_csv
+@dataclass
+class Tracker:
+    id: int
+    name: str
 
 class WorkRequest:
     def __init__(self, id, title, description, priority, status, contact: CustomField):
@@ -120,17 +124,16 @@ def create_work_request(row: list[str]):
 
 if __name__ == '__main__':
     #init the variables
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         sys.exit("Invalid number of arguments")
     logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
-
+    tracker = sys.argv[4]
     if sys.argv[3] == "-dr":
         server= "http://localhost:3000/"
     else:
         server = sys.argv[3]
-
     try:
         parsec_csv = read_csv_data(path)
     except (FileNotFoundError, ValueError, OSError, csv.Error) as e:
@@ -139,9 +142,23 @@ if __name__ == '__main__':
 
     try:
         client = create_redmine_client(server, project)
+        trackers = client.get_trackers()
     except (ValueError, BaseRedmineError) as e:
         logger.exception("Couldn't connect to redmine")
         sys.exit(1)
+    if not tracker in [x[1] for x in trackers]:
+        logger.error(f"Tracker {tracker} not found")
+        sys.exit(1)
+    #select tracker
+    selected_tracker = next(
+        ((tracker_id, name) for tracker_id, name in trackers if name == tracker),
+        None,
+    )
+    if selected_tracker is None:
+        logger.error("Tracker %r not found", tracker)
+        sys.exit(1)
+    tracker_id, tracker_name = selected_tracker
+    selected_tracker = Tracker(tracker_id, tracker_name)
     #Temp variables
     valid_work_requests = []
     valid_work_request_ids = set()
