@@ -132,22 +132,26 @@ def create_work_request(row: list[str]):
 
 if __name__ == '__main__':
     #init the variables
-    if len(sys.argv) != 5:
+    if len(sys.argv) < 5 or len(sys.argv) > 6:
         sys.exit("Invalid number of arguments")
     logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
     tracker = sys.argv[4]
-    if sys.argv[3] == "-dr":
+    if sys.argv[3] == "--local":
         server= "http://localhost:3000/"
     else:
         server = sys.argv[3]
+    dry_run = False
+    if sys.argv[5]:
+        if sys.argv[5] != "--dry-run":
+            sys.exit("Invalid dry run argument")
+        dry_run = True
     try:
         parsec_csv = read_csv_data(path)
     except (FileNotFoundError, ValueError, OSError, csv.Error) as e:
         logger.exception("Couldn't open csv file")
         sys.exit(1)
-
     try:
         client = create_redmine_client(server, project)
         trackers = client.get_trackers()
@@ -171,6 +175,7 @@ if __name__ == '__main__':
     valid_work_requests = []
     valid_work_request_ids = set()
     invalid_work_request = []
+    dry_run_logs = []
     #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
         if index == 0: continue
@@ -205,7 +210,10 @@ if __name__ == '__main__':
                 {"id": field.id, "value": field.value}
                 for field in work_request.custom_fields.values()
             ]
-            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
+            if dry_run:
+                dry_run_logs.append(f"[DRY-RUN] Work request {str(work_request)} created.")
+            else:
+                client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
             break
@@ -213,4 +221,6 @@ if __name__ == '__main__':
             logger.exception("Couldn't create issue.")
     # output log from read
     operation_report = RunReport(valid_work_requests, invalid_work_request)
+    if dry_run_logs:
+        operation_report.log += "\n".join(dry_run_logs)
     operation_report.save_log()
