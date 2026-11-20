@@ -96,7 +96,9 @@ class RunReport:
         self.valid_reqsuests = valid_reqsuests
         self.invalid_requests = invalid_requests
         self.dry_run = []
+        self.skipped_existing_requests = []
         self.log = ""
+        self.imported_count = 0
 
     def report_log(self) -> str:
         lines = [f"{len(self.valid_reqsuests)} Valid Requests:"]
@@ -119,6 +121,17 @@ class RunReport:
             with open("run_report.log", "a") as f:
                 f.write("\n".join(self.dry_run))
                 f.write("\n===============\n")
+
+    def skipped_existing_requests_report(self):
+        if self.skipped_existing_requests:
+            with open("run_report.log", "a") as f:
+                f.write("\n".join(self.skipped_existing_requests))
+                f.write("\n===============\n")
+
+    def final_report(self):
+        with open("run_report.log", "a") as f:
+            f.write(f"\n{self.imported_count} entries imported out of {len(self.valid_reqsuests)} read.\n")
+            f.write("\n===============\n")
 
     def save_log(self):
         with open("run_report.log", "a") as f:
@@ -185,6 +198,7 @@ if __name__ == '__main__':
     valid_work_request_ids = set()
     invalid_work_request = []
     dry_run_logs = []
+    work_requests_skipped_existing = []
     #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
         if index == 0: continue
@@ -212,7 +226,7 @@ if __name__ == '__main__':
     for work_request in valid_work_requests:
         custom_id = work_request.custom_fields["custom_id"].value
         if custom_id in custom_ids:
-            logger.error(f"Work request with custom_id {custom_id} already exists")
+            work_requests_skipped_existing.append(f"Work request with custom_id {custom_id} already exists")
             continue
         try:
             custom_fields = [
@@ -232,4 +246,9 @@ if __name__ == '__main__':
     operation_report = RunReport(valid_work_requests, invalid_work_request)
     if dry_run_logs:
         operation_report.dry_run = dry_run_logs
+        operation_report.dry_run_report()
+    if work_requests_skipped_existing:
+        operation_report.skipped_existing_requests = work_requests_skipped_existing
+        operation_report.skipped_existing_requests_report()
+    operation_report.final_report()
     operation_report.save_log()
