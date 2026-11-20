@@ -119,12 +119,14 @@ class RunReport:
     def dry_run_report(self):
         if self.dry_run:
             with open("run_report.log", "a") as f:
+                f.write(f"Dry run report:\n")
                 f.write("\n".join(self.dry_run))
                 f.write("\n===============\n")
 
     def skipped_existing_requests_report(self):
         if self.skipped_existing_requests:
             with open("run_report.log", "a") as f:
+                f.write("Skipped existing requests:\n")
                 f.write("\n".join(self.skipped_existing_requests))
                 f.write("\n===============\n")
 
@@ -139,6 +141,8 @@ class RunReport:
             f.write("===============\n")
         if self.dry_run:
             self.dry_run_report()
+        if self.skipped_existing_requests:
+            self.skipped_existing_requests_report()
 
 def create_work_request(row: list[str]):
     #Check for type validation non csv data
@@ -247,9 +251,7 @@ if __name__ == '__main__':
     # output log from read
     if dry_run_logs:
         operation_report.dry_run = dry_run_logs
-        operation_report.dry_run_report()
     if work_requests_skipped_existing:
         operation_report.skipped_existing_requests = work_requests_skipped_existing
-        operation_report.skipped_existing_requests_report()
     operation_report.final_report()
     operation_report.save_log()
