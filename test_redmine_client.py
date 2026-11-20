@@ -60,6 +60,7 @@ def test_get_issues():
     issues = rc.get_issues()
     assert isinstance(issues, list)
     assert len(issues) > 0
+    assert isinstance(issues[0], Issue)
 
 
 def test_get_issue():
@@ -100,6 +101,7 @@ def test_custom_fields():
     test_project = 'test-redmine-connection'
     rc = redmine_client(redmine, test_project)
     custom_fields = rc.get_custom_fields()
+    print(custom_fields)
     assert isinstance(custom_fields, list)
     assert custom_fields is not None
     assert len(custom_fields) > 0

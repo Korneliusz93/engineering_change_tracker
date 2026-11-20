@@ -45,21 +45,24 @@ class Tracker:
 
 class WorkRequest:
     def __init__(self, id, title, description, priority, status, contact: CustomField):
-        self.id = id
         self.title = title
         self.description = description
         self.priority = priority
         self.status = status
         self.log = ""
         #CONFIGURATION: All fields below should be considered Custom
-        self.custom_fields = {"contact": contact}
+        self.custom_fields = {
+            "contact": contact,
+            "custom_id": id
+        }
 
     def validate(self, id_list: set[str]) -> bool:
         contact = self.custom_fields["contact"].value
-        if not self.id:
+        checked_id = self.custom_fields["custom_id"].value
+        if not checked_id:
             self.log += "Empty Id; "
-        if self.id in id_list:
-            self.log += f"{self.id} Id is already taken; "
+        if checked_id in id_list:
+            self.log += f"{checked_id} Id is already taken; "
         if not self.title:
             self.log += "Empty title; "
         if self.priority not in ["High", "Medium", "Low"]:
@@ -77,9 +80,11 @@ class WorkRequest:
         return True
 
     def __str__(self):
+        custom_field_id = self.custom_fields["custom_id"].value
+        contact = self.custom_fields["contact"].value
         if self.log:
             return f"{self.log}"
-        return f"{self.id} {self.title} {self.description} {self.priority} {self.status} {self.custom_fields["contact"].value}"
+        return f"{custom_field_id} {self.title} {self.description} {self.priority} {self.status} {contact}"
 
 class ReportMsg():
     def __init__(self, row, message):
@@ -90,14 +95,19 @@ class RunReport:
     def __init__(self, valid_reqsuests: list[WorkRequest], invalid_requests: list[ReportMsg]):
         self.valid_reqsuests = valid_reqsuests
         self.invalid_requests = invalid_requests
+        self.dry_run = []
+        self.skipped_existing_requests = []
         self.log = ""
+        self.imported_count = 0
 
     def report_log(self) -> str:
         lines = [f"{len(self.valid_reqsuests)} Valid Requests:"]
         for request in self.valid_reqsuests:
+            custom_field_id = request.custom_fields["custom_id"].value
+            contact = request.custom_fields["contact"].value
             lines.append(
-                f"{request.id}: {request.title}; {request.description}; "
-                f"{request.priority}; {request.status}; {request.custom_fields["contact"].value}"
+                f"{custom_field_id}: {request.title}; {request.description}; "
+                f"{request.priority}; {request.status}; {contact}"
             )
         if self.invalid_requests:
             lines.append(f"{len(self.invalid_requests)} Invalid Requests:")
@@ -106,10 +116,29 @@ class RunReport:
 
         return "\n".join(lines) + "\n"
 
+    def dry_run_report(self):
+        if self.dry_run:
+            with open("run_report.log", "a") as f:
+                f.write("\n".join(self.dry_run))
+                f.write("\n===============\n")
+
+    def skipped_existing_requests_report(self):
+        if self.skipped_existing_requests:
+            with open("run_report.log", "a") as f:
+                f.write("\n".join(self.skipped_existing_requests))
+                f.write("\n===============\n")
+
+    def final_report(self):
+        with open("run_report.log", "a") as f:
+            f.write(f"\n{self.imported_count} entries imported out of {len(self.valid_reqsuests)} read.\n")
+            f.write("\n===============\n")
+
     def save_log(self):
         with open("run_report.log", "a") as f:
             f.write(self.report_log())
             f.write("===============\n")
+        if self.dry_run:
+            self.dry_run_report()
 
 def create_work_request(row: list[str]):
     #Check for type validation non csv data
@@ -117,29 +146,34 @@ def create_work_request(row: list[str]):
         raise ValueError(f"Invalid number of arguments {len(row)}")
     #CONFIGURATION: Add all necessary Custom fields declarations and fill the value
     contact = CustomField(2,"")
-    id, title, description, priority, status, contact.value = row
-    if [x for x in [id, title, description, priority, status, contact.value] if not isinstance(x, str)]:
+    custom_id = CustomField(3, "")
+    custom_id.value , title, description, priority, status, contact.value = row
+    if [x for x in [custom_id.value, title, description, priority, status, contact.value] if not isinstance(x, str)]:
         raise TypeError("Invalid data type provided")
-    return WorkRequest(id, title, description, priority, status, contact)
+    return WorkRequest(custom_id, title, description, priority, status, contact)
 
 if __name__ == '__main__':
     #init the variables
-    if len(sys.argv) != 5:
+    if len(sys.argv) < 5 or len(sys.argv) > 6:
         sys.exit("Invalid number of arguments")
     logger = configure_logging()
     path = sys.argv[1]
     project = sys.argv[2]
     tracker = sys.argv[4]
-    if sys.argv[3] == "-dr":
+    if sys.argv[3] == "--local":
         server= "http://localhost:3000/"
     else:
         server = sys.argv[3]
+    dry_run = False
+    if len(sys.argv) == 6 and sys.argv[5]:
+        if sys.argv[5] != "--dry-run":
+            sys.exit("Invalid dry run argument")
+        dry_run = True
     try:
         parsec_csv = read_csv_data(path)
     except (FileNotFoundError, ValueError, OSError, csv.Error) as e:
         logger.exception("Couldn't open csv file")
         sys.exit(1)
-
     try:
         client = create_redmine_client(server, project)
         trackers = client.get_trackers()
@@ -163,28 +197,46 @@ if __name__ == '__main__':
     valid_work_requests = []
     valid_work_request_ids = set()
     invalid_work_request = []
+    dry_run_logs = []
+    work_requests_skipped_existing = []
     #Read work request, separate by validity
     for index, row in enumerate(parsec_csv):
         if index == 0: continue
         try:
             work_request = create_work_request(row)
             if work_request.validate(valid_work_request_ids):
+                custom_id = work_request.custom_fields["custom_id"].value
                 valid_work_requests.append(work_request)
-                valid_work_request_ids.add(work_request.id)
+                valid_work_request_ids.add(custom_id)
             else:
                 invalid_work_request.append(ReportMsg(index, str(work_request)))
         except TypeError as e:
             invalid_work_request.append(ReportMsg(index, str(e)))
         except ValueError as e:
             invalid_work_request.append(ReportMsg(index, str(e)))
+    #Check against existing issues redmine DB if id exists
+    existing_issues = client.get_issues()
+    custom_ids = {
+        str(field["value"])
+        for issue in existing_issues
+        for field in issue.custom_fields
+        if field["id"] == 3 and field["value"] is not None
+    }
     #save valid requests to Redmine
     for work_request in valid_work_requests:
+        custom_id = work_request.custom_fields["custom_id"].value
+        if custom_id in custom_ids:
+            work_requests_skipped_existing.append(f"Work request with custom_id {custom_id} already exists")
+            continue
         try:
             custom_fields = [
                 {"id": field.id, "value": field.value}
                 for field in work_request.custom_fields.values()
             ]
-            client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
+            if dry_run:
+                dry_run_logs.append(f"[DRY-RUN] Work request {str(work_request)} created.")
+            else:
+                client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
             break
@@ -192,4 +244,11 @@ if __name__ == '__main__':
             logger.exception("Couldn't create issue.")
     # output log from read
     operation_report = RunReport(valid_work_requests, invalid_work_request)
+    if dry_run_logs:
+        operation_report.dry_run = dry_run_logs
+        operation_report.dry_run_report()
+    if work_requests_skipped_existing:
+        operation_report.skipped_existing_requests = work_requests_skipped_existing
+        operation_report.skipped_existing_requests_report()
+    operation_report.final_report()
     operation_report.save_log()

@@ -82,6 +82,9 @@ Configure an appropriate issue type, such as `Feature`, according to your Redmin
 
 **Note:** Priority names, status values, and issue types must match the configuration and identifiers expected by the application and the Redmine API.
 
+The application supports Redmine custom fields. Before importing data, configure the required fields in Redmine’s administration interface. The fields used by the application are currently defined in code and can be extended there.
+Because custom field id is currently hardcoded: Custom field IDs must match those in your Redmine instance.
+
 ### 2. Configure environment variables
 
 Create a `.env` file in the project root:
@@ -133,8 +136,11 @@ The example records are illustrative and do not represent real contacts.
 Run the application from the command line and provide the path to the input CSV file:
 
 ```bash
-python main.py sample_data/sample_data1.csv
+python main.py sample_data/sample_data1.csv <server> <tracker> <dry-run flag>
 ```
+
+giving --local in server uses localhost on port 3000
+dry-run flag is optional and instead of writing to server is giving the report output.
 
 Replace `main.py` with the actual application entry-point filename if necessary.
 
