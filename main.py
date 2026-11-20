@@ -223,6 +223,7 @@ if __name__ == '__main__':
         if field["id"] == 3 and field["value"] is not None
     }
     #save valid requests to Redmine
+    operation_report = RunReport(valid_work_requests, invalid_work_request)
     for work_request in valid_work_requests:
         custom_id = work_request.custom_fields["custom_id"].value
         if custom_id in custom_ids:
@@ -237,13 +238,13 @@ if __name__ == '__main__':
                 dry_run_logs.append(f"[DRY-RUN] Work request {str(work_request)} created.")
             else:
                 client.create_issue(work_request.title, work_request.description, work_request.priority, work_request.status, custom_fields)
+                operation_report.imported_count += 1
         except AuthError as e:
             logger.exception("Couldn't authenticate and create issue")
             break
         except BaseRedmineError as e:
             logger.exception("Couldn't create issue.")
     # output log from read
-    operation_report = RunReport(valid_work_requests, invalid_work_request)
     if dry_run_logs:
         operation_report.dry_run = dry_run_logs
         operation_report.dry_run_report()
