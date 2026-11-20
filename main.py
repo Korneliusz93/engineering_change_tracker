@@ -152,7 +152,7 @@ if __name__ == '__main__':
     else:
         server = sys.argv[3]
     dry_run = False
-    if sys.argv[5]:
+    if len(sys.argv) == 6 and sys.argv[5]:
         if sys.argv[5] != "--dry-run":
             sys.exit("Invalid dry run argument")
         dry_run = True
