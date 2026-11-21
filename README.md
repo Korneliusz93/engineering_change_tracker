@@ -131,6 +131,8 @@ WR-002;Review cooling system;Investigate cooling performance;Medium;new;technici
 
 The example records are illustrative and do not represent real contacts.
 
+You can download excel template file from project in template_csv folder.
+
 ## Usage
 
 Run the application from the command line and provide the path to the input CSV file:
